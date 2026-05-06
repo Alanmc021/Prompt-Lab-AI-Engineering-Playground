@@ -27,7 +27,7 @@ O objetivo deste projeto é **simular um ambiente real de AI Engineering**, perm
 src/
   ├── prompts/        # Definição dos prompts versionados
   ├── chains/         # Execução dos prompts (LLM)
-  ├── evaluator/      # Avaliação de qualidade
+  ├── evaluator/      # Avaliação heurística + AI Judge
   ├── router/         # Roteamento de input
   ├── runner.ts       # Orquestrador principal
 ```
@@ -39,7 +39,7 @@ src/
 Fluxo principal da aplicação:
 
 ```text
-Input → Router → Prompt (v1/v2) → LLM → Parser → Output → Evaluation
+Input → Router → Prompt (v1/v2) → LLM → Parser → Output → Evaluation + AI Judge
 ```
 
 ---
@@ -99,6 +99,29 @@ Camada responsável por:
 * avaliar respostas
 * comparar versões
 * gerar feedback
+
+---
+
+### 🔹 AI Judge (implementado)
+
+Camada automática de avaliação baseada em LLM com saída estruturada:
+
+```json
+{
+  "score": 9,
+  "label": "good",
+  "clarity": 9,
+  "accuracy": 10,
+  "utility": 8,
+  "feedback": "A explicação é clara e precisa, mas poderia incluir mais exemplos práticos."
+}
+```
+
+Critérios usados:
+
+* clareza (`clarity`)
+* precisão técnica (`accuracy`)
+* utilidade prática (`utility`)
 
 ---
 
@@ -179,14 +202,14 @@ LANGCHAIN_API_KEY=your_key
 Execute:
 
 ```bash
-node src/runner.js "RAG"
+npm run dev -- "RAG"
 ```
 
 ---
 
 # 🎯 Próximos passos
 
-* [ ] Adicionar AI Judge (avaliação automática)
+* [x] Adicionar AI Judge (avaliação automática)
 * [ ] Criar dataset de testes
 * [ ] Implementar Prompt Registry
 * [ ] Evoluir para multi-step chaining

@@ -4,6 +4,7 @@ import { explainV1 } from "./prompts/explain.v1.js";
 import { explainV2 } from "./prompts/explain.v2.js";
 import { runPrompt } from "./chains/explain.chain.js";
 import { evaluate } from "./evaluator/evaluator.js";
+import { judgeExplanation } from "./evaluator/ai-judge.js";
 import { route } from "./router/router.js";
 
 async function main() {
@@ -33,6 +34,15 @@ async function main() {
   console.log("\n--- EVALUATION ---");
   console.log("V1:", evaluate(v1));
   console.log("V2:", evaluate(v2));
+
+  console.log("\n--- AI JUDGE ---");
+  const [v1Judge, v2Judge] = await Promise.all([
+    judgeExplanation(topic, "v1", v1),
+    judgeExplanation(topic, "v2", v2),
+  ]);
+
+  console.log("V1:", v1Judge);
+  console.log("V2:", v2Judge);
 }
 
 main().catch((error) => {
