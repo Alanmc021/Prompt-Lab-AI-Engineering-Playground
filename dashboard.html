@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Lab Dashboard</title>
+    <style>
+      :root {
+        --bg: #f3f4ef;
+        --card: #fffdf7;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #d4d4d8;
+        --v1: #0f766e;
+        --v2: #b45309;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% 10%, #d9f0e8 0%, transparent 40%),
+          radial-gradient(circle at 85% 0%, #ffe7bf 0%, transparent 35%),
+          var(--bg);
+      }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      p { margin: 0 0 16px; color: var(--muted); }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+      .k { font-size: 12px; color: var(--muted); }
+      .v { font-size: 22px; font-weight: 700; margin-top: 4px; }
+      .section { margin-top: 18px; }
+      .uploader { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      input[type=file] { padding: 8px; border: 1px dashed var(--line); border-radius: 10px; background: #fff; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; }
+      th { color: var(--muted); font-weight: 600; }
+      .pill { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+      .v1 { background: #d1fae5; color: #065f46; }
+      .v2 { background: #ffedd5; color: #9a3412; }
+      canvas { width: 100%; max-width: 100%; height: 280px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+      @media (max-width: 800px) { .row { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Prompt Lab Dashboard</h1>
+      <p>Carregue um arquivo de benchmark (`runs/benchmark-*.json`) para visualizar métricas.</p>
+
+      <div class="card uploader">
+        <input id="fileInput" type="file" accept="application/json" />
+        <span id="status" class="k">Nenhum arquivo carregado.</span>
+      </div>
+
+      <div class="row">
+        <div class="card"><div class="k">Winner</div><div class="v" id="winner">-</div></div>
+        <div class="card"><div class="k">V1 Avg Score</div><div class="v" id="v1Score">-</div></div>
+        <div class="card"><div class="k">V2 Avg Score</div><div class="v" id="v2Score">-</div></div>
+        <div class="card"><div class="k">Topics</div><div class="v" id="topics">-</div></div>
+      </div>
+
+      <div class="section card">
+        <div class="k">Comparativo por versão</div>
+        <canvas id="chart" width="1000" height="300"></canvas>
+      </div>
+
+      <div class="section card">
+        <div class="k">Registros por tópico</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Tópico</th>
+              <th>Versão</th>
+              <th>Score</th>
+              <th>Latência (ms)</th>
+              <th>Tokens</th>
+              <th>Custo (USD)</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const statusEl = document.getElementById("status");
+      const rowsEl = document.getElementById("rows");
+
+      function setSummary(data) {
+        const summary = data.summary || {};
+        const v1 = summary.versions?.v1 || {};
+        const v2 = summary.versions?.v2 || {};
+        document.getElementById("winner").textContent = summary.winnerByAvgScore || "-";
+        document.getElementById("v1Score").textContent = v1.avgScore ?? "-";
+        document.getElementById("v2Score").textContent = v2.avgScore ?? "-";
+        document.getElementById("topics").textContent = summary.topics?.length ?? "-";
+      }
+
+      function setRows(data) {
+        rowsEl.innerHTML = "";
+        (data.records || []).forEach((r) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.topic}</td>
+            <td><span class="pill ${r.version}">${r.version.toUpperCase()}</span></td>
+            <td>${r.judge?.score ?? "-"}</td>
+            <td>${r.latencyMs ?? "-"}</td>
+            <td>${r.estimatedTokens ?? "-"}</td>
+            <td>${r.estimatedCostUsd ?? "-"}</td>
+          `;
+          rowsEl.appendChild(tr);
+        });
+      }
+
+      function drawChart(data) {
+        const canvas = document.getElementById("chart");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const v1 = data.summary?.versions?.v1 || {};
+        const v2 = data.summary?.versions?.v2 || {};
+        const labels = ["Avg Score", "Avg Latency (s)", "Total Cost x1e4"];
+        const v1Values = [v1.avgScore || 0, (v1.avgLatencyMs || 0) / 1000, (v1.totalEstimatedCostUsd || 0) * 10000];
+        const v2Values = [v2.avgScore || 0, (v2.avgLatencyMs || 0) / 1000, (v2.totalEstimatedCostUsd || 0) * 10000];
+
+        const max = Math.max(...v1Values, ...v2Values, 1);
+        const margin = 50;
+        const groupW = (canvas.width - margin * 2) / labels.length;
+        const barW = 34;
+        const h = canvas.height - margin * 2;
+
+        ctx.font = "12px IBM Plex Sans, sans-serif";
+        ctx.fillStyle = "#6b7280";
+
+        labels.forEach((label, i) => {
+          const gx = margin + i * groupW + groupW / 2;
+          const v1h = (v1Values[i] / max) * h;
+          const v2h = (v2Values[i] / max) * h;
+          const yBase = canvas.height - margin;
+
+          ctx.fillStyle = "#0f766e";
+          ctx.fillRect(gx - barW - 4, yBase - v1h, barW, v1h);
+          ctx.fillStyle = "#b45309";
+          ctx.fillRect(gx + 4, yBase - v2h, barW, v2h);
+
+          ctx.fillStyle = "#374151";
+          ctx.fillText(label, gx - 45, yBase + 18);
+        });
+      }
+
+      function render(data, name) {
+        setSummary(data);
+        setRows(data);
+        drawChart(data);
+        statusEl.textContent = `Arquivo carregado: ${name}`;
+      }
+
+      fileInput.addEventListener("change", async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          render(data, file.name);
+        } catch (error) {
+          statusEl.textContent = "Erro ao carregar JSON.";
+        }
+      });
+    </script>
+  </body>
+</html>
+

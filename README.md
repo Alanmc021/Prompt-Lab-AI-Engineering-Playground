@@ -205,15 +205,34 @@ Execute:
 npm run dev -- "RAG"
 ```
 
+Rodar benchmark com dataset:
+
+```bash
+npm run benchmark
+```
+
+O benchmark salva um arquivo JSON em `runs/` com:
+
+* resultados por tópico e versão
+* score do AI Judge
+* latência
+* estimativa de tokens/custo
+* resumo comparativo v1 vs v2
+
+Dashboard HTML:
+
+* abra `dashboard.html` no navegador
+* carregue um arquivo `runs/benchmark-*.json`
+
 ---
 
 # 🎯 Próximos passos
 
 * [x] Adicionar AI Judge (avaliação automática)
-* [ ] Criar dataset de testes
+* [x] Criar dataset de testes
 * [ ] Implementar Prompt Registry
 * [ ] Evoluir para multi-step chaining
-* [ ] Integrar com dashboard customizado
+* [x] Integrar com dashboard customizado
 * [ ] Adicionar RAG com base de conhecimento
 
 ---
